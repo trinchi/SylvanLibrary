@@ -5,6 +5,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using SylvanLibrary.Cache;
 using SylvanLibrary.Config;
 using SylvanLibrary.Repository;
 using SylvanLibrary.Service;
@@ -24,7 +25,6 @@ namespace SylvanLibrary
         // For more information on how to configure your application, visit https://go.microsoft.com/fwlink/?LinkID=398940
         public void ConfigureServices(IServiceCollection services, IWebHostEnvironment env)
         {
-            // requires using Microsoft.Extensions.Options
             services.Configure<SylvanLibraryDatabaseSettings>(
                 _configuration.GetSection(nameof(SylvanLibraryDatabaseSettings)));
 
@@ -34,16 +34,18 @@ namespace SylvanLibrary
             services.AddSingleton<CollectionRepository>();
             services.AddSingleton<TestService>();
 
-            if (env.IsDevelopment())
+            // Add Memory caching
+            services.AddDistributedMemoryCache();
+            services.AddSingleton<MemoryCacheProvider>();
+
+            if (!env.IsDevelopment())
             {
-                services.AddDistributedMemoryCache();
-            }
-            else
-            {
+                // Add Redis caching 
                 services.AddStackExchangeRedisCache(options => { options.Configuration = "localhost:6379"; });
+                services.AddSingleton<RedisCacheProvider>();
             }
 
-
+            // Add GraphQL services
             services
                 .AddGraphQLServer()
                 .AddQueryType<Query>();
